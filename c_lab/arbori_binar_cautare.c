@@ -53,7 +53,7 @@ NodeT *findMax(NodeT *root)
 {
     if (root == NULL)
         return NULL;
-    if (root->left != NULL)
+    if (root->right != NULL)
         return findMax(root->right);
     return root;
 }
@@ -63,7 +63,7 @@ NodeT* succesor(NodeT *root, NodeT *node)
     if(root == NULL) return NULL;
     if(node->right != NULL) return findMin(node->right);
     NodeT* suc = NULL;
-    while(root != NULL)
+    while(root != NULL && root->key != node->key)
     {
         if(node->key < root->key)
         {
@@ -81,7 +81,7 @@ NodeT* predecesor(NodeT *root, NodeT *node)
     if(root==NULL) return NULL;
     if (node->left!=NULL) return findMax(node->left);
     NodeT* pre=NULL;
-    while(root != NULL)
+    while(root != NULL && root->key != node->key)
     {
         if(node->key > root->key)
         {
@@ -169,7 +169,7 @@ int main()
     printf( "\nPostorder listing\n" );
     postOrder( root);
 
-    int key = 2;
+    int key = 13;
     p = searchKey( root, key );
     if ( p != NULL )
     {
