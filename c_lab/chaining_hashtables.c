@@ -44,22 +44,12 @@ void deleteKey(NodeT* hTable[M], int key)
         return;
     if (element->val == p->val)
     {
-        if (p->next == NULL)
-            hTable[x] = NULL;
-        else
-        {
-            p->val = p->next->val;
-            element = p->next;
-            p->next = p->next->next;
-            free(element);
-        }
+        hTable[x]=hTable[x]->next;
     }
     else
     {
         while (p->next != NULL && p->next->val != key)
             p = p->next;
-        if (p->next == NULL)
-            return;
         p->next = p->next->next;
         free(element);
     }
