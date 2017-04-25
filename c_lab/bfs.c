@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+int *dist,*T;
 /*****************************************************
   Citirea datelor despre un graf dintr-un fisier
   cu reprezentarea grafului prin matrice de adiacenta.
@@ -12,8 +12,6 @@
   nodurile în ordinea parcurgerii.
 ******************************************************/
 
-#define QUEUE_MAX_SIZE 100
-
 typedef struct
 {
     int n;      // numar de varfuri
@@ -23,59 +21,74 @@ typedef struct
 enum { NEVIZITAT, VIZITAT };
 
 /// TODO: de definit o structura Coada si
-typedef struct
+/// operatiile initializeaza, enqueue, dequeue, goala
+typedef struct nodelist
 {
-    int array[QUEUE_MAX_SIZE];
-    int capacity;
-    int head;
-    int size;
-    int tail;
+    int key;
+    struct nodelist *next;
+} NodeL;
+
+typedef struct queue
+{
+    NodeL *first;
+    NodeL *last;
 } Coada;
 
-int goala(Coada c)
+void afisare (Coada *coada)
 {
-    return c.size == 0;
+    NodeL *p=coada->first;
+    while(p!=NULL)
+    {
+        printf("%d ",p->key);
+        p=p->next;
+    }
+    printf("\n");
 }
 
-void enqueue(int key, Coada *my_queue)
+int goala(Coada* coada)
 {
-    if (my_queue->tail >= my_queue->capacity)
-        my_queue->tail = 0;
-    if (my_queue->tail == my_queue->head && my_queue->size != 0)
+    if(coada->first==NULL) return 1;
+    else return 0;
+}
+
+Coada* createQueue()
+{
+    Coada *queueTest=(Coada*)malloc(sizeof(Coada));
+    queueTest->first=NULL;
+    queueTest->last=NULL;
+    return queueTest;
+}
+
+void enqueue(Coada *coada, int key)
+{
+    NodeL *p=(NodeL*)malloc(sizeof(NodeL));
+    p->key=key;
+    p->next=NULL;
+    if(coada->first==NULL)
     {
-        printf("OVERFLOW!\n");
+        coada->first=p;
+        coada->last=p;
+    }
+    else
+    {
+        coada->last->next=p;
+        coada->last=p;
+    }
+}
+
+NodeL* dequeue(Coada *coada)
+{
+    if(coada->last==NULL)// nodSursa va fi primul nod scos din coada
+    {
+        printf("COADA ESTE GOALA!");
         return;
     }
-    my_queue->array[my_queue->tail++] = key;
-    my_queue->size++;
-
+    NodeL *q=coada->first;
+    coada->first=coada->first->next;
+    if(coada->first==NULL)
+        coada->last=NULL;
+    return q;
 }
-
-
-int dequeue(Coada *my_queue)
-{
-    if (my_queue->head >= my_queue->capacity)
-        my_queue->head = 0;
-    if (my_queue->head != my_queue->tail)
-    {
-        int x = my_queue->array[my_queue->head++];
-        my_queue->size--;
-        return x;
-    }
-    return -1;
-}
-
-void initializeaza(Coada *c)
-{
-    int i;
-    c->size = 0;
-    c->head = 0;
-    c->tail = 0;
-    c->capacity = QUEUE_MAX_SIZE;
-    for (i = 0; i < c->capacity; i++)
-        c->array[i] = 0;
-}
-
 
 void printErr()
 {
@@ -83,36 +96,6 @@ void printErr()
     exit(1);
 }
 
-void afiseaza_coada(Coada my_queue)
-{
-    if (my_queue.head < my_queue.tail)
-    {
-        int i;
-        for (i= my_queue.head; i < my_queue.tail; i++)
-        {
-            printf("%d ", my_queue.array[i]);
-        }
-    }
-    else
-    {
-        int i = my_queue.head;
-        while(i<=my_queue.capacity-1)
-        {
-            printf("%d ", my_queue.array[i]);
-            i++;
-        }
-        i = 0;
-        while (i<my_queue.tail)
-        {
-            printf("%d ", my_queue.array[i]);
-            i++;
-        }
-
-    }
-    printf("\n\n");
-
-
-}
 
 void bfs( Graf G, int nodSursa )
 {
@@ -120,32 +103,29 @@ void bfs( Graf G, int nodSursa )
     vizitate = calloc(G.n, sizeof(int));
     if (vizitate == NULL) printErr();
 
-    Coada Q; /* coada nodurilor - intregi */
+    Coada *Q=createQueue();
 
     int i, v, w; /* noduri */
 
-    initializeaza( &Q );
     for ( i = 0; i < G.n; i++ ) /* marcam toate nodurile ca nevizitate */
         vizitate[ i ] = NEVIZITAT;
     vizitate[ nodSursa ] = VIZITAT; /* marcam nodul sursa ca vizitat */
-//	procesam informatia pt nodSursa;
-    enqueue(nodSursa, &Q);
-    // nodSursa va fi primul nod scos din coada
-    while(!goala(Q))
+    enqueue( Q,nodSursa);
+    afisare(Q);
+
+    while( ! goala( Q ))
     {
-        v = dequeue(&Q);
-        for (w = 0; w < G.n; w++)
-        {
-            if (G.m[w][v] == 1)
-            {
-                if (vizitate[w] == NEVIZITAT)
+        v = dequeue( Q )->key; // nodSursa va fi primul nod scos din coada
+        for (w=0; w<G.n; w++)
+            if(G.m[v][w]==1)
+                if ( vizitate[ w ] == NEVIZITAT )
                 {
-                    vizitate[w] = VIZITAT;
-                    enqueue(w, &Q);
-                    afiseaza_coada(Q);
+                    vizitate[ w ] = VIZITAT;
+                    dist[w]=dist[v]+1;
+                    T[w]=v;
+                    enqueue( Q,w );
+                    afisare(Q);
                 }
-            }
-        }
     }
 }
 
@@ -168,23 +148,13 @@ void citesteGraf(FILE* f, Graf* pG)
     // citeste pe rand perechi (v, w) si memoreaza arcul/muchia in matricea de adiacenta:
     while (fscanf(f, "%d%d", &v, &w) == 2)
     {
-        pG->m[v][w] = pG->m[w][v] = 1;
-    }
-}
-
-void afiseaza_graf(Graf g)
-{
-    int i, j;
-    for (i = 0; i < g.n; i++)
-    {
-        for (j = 0; j < g.n; j++)
-            printf("%d ", g.m[i][j]);
-        printf("\n");
+        pG->m[v][w]=1;
     }
 }
 
 int main()
 {
+    int i;
     FILE* f = fopen("graf.txt", "r");
     if (f == NULL)
     {
@@ -193,13 +163,21 @@ int main()
     }
     Graf G;
     citesteGraf(f, &G);
-    afiseaza_graf(G);
     fclose(f);
+
+    dist=calloc(G.n, sizeof(int));
+    T=calloc(G.n, sizeof(int));
 
     int v;
     printf("Numarul de noduri: %d. \nDati nodul sursa: ", G.n);
     scanf("%d", &v);
 
     bfs(G, v);
+    printf("Distante de la nodul de pornire: ");
+    for(i=0; i<G.n; i++)
+        printf("%d ",dist[i]);
+    printf("\nVector de tati: ");
+    for(i=0; i<G.n; i++)
+        printf("%d ",T[i]);
     return 0;
 }
